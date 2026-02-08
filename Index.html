@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Steam Accounts | Раздача</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --steam: #1b2838;
+            --steam-light: #2a475e;
+            --accent: #00adef;
+            --accent-glow: rgba(0, 173, 239, 0.4);
+            --bg: #0a0c10;
+            --surface: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --warning: #ff6b6b;
+            --success: #51cf66;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100%;
+        }
+
+        /* Фон */
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .bg-mesh::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 80%, var(--accent-glow) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(26, 159, 255, 0.2) 0%, transparent 50%);
+            animation: rotate 40s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Навигация точки (десктоп) */
+        .nav-dots {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 100;
+        }
+
+        @media (min-width: 769px) {
+            .nav-dots { display: flex; }
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-dot:hover, .nav-dot.active {
+            background: var(--accent);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Мобильное меню снизу */
+        .nav-mobile {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 12, 16, 0.98);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            padding: 12px 20px 24px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        @media (min-width: 769px) {
+            .nav-mobile { display: none; }
+        }
+
+        .nav-mobile-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 11px;
+            transition: all 0.3s;
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+
+        .nav-mobile-item span:first-child {
+            font-size: 22px;
+        }
+
+        .nav-mobile-item.active,
+        .nav-mobile-item:hover {
+            color: var(--accent);
+            background: rgba(0, 173, 239, 0.1);
+        }
+
+        /* Секции */
+        .section {
+            min-height: 100vh;
+            padding: 100px 20px 80px;
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* ПОСЛЕДНЯЯ СЕКЦИЯ - без min-height, с большим padding */
+        .section:last-of-type {
+            border-bottom: none;
+            min-height: auto;
+            padding-bottom: 160px;
+        }
+
+        /* Текстовые эффекты */
+        .text-outline {
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .text-gradient-subtle {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 40px;
+            background: linear-gradient(135deg, var(--steam-light) 0%, var(--steam) 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 52px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -3px;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--text-dim);
+            margin-bottom: 48px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Кнопки */
+        .links {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-tg:hover { border-color: rgba(0, 136, 204, 0.5); }
+        .btn-tt:hover { border-color: rgba(255, 0, 80, 0.5); }
+
+        /* Заголовки */
+        h2 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -2px;
+        }
+
+        .section-desc {
+            color: var(--text-dim);
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+
+        /* Факты */
+        .facts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .facts-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 42px; }
+            h2 { font-size: 28px; }
+        }
+
+        .fact-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px;
+        }
+
+        .fact-number {
+            font-size: 38px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+
+        .fact-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .fact-desc {
+            font-size: 14px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Платформы */
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .platform-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px;
+        }
+
+        .platform-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .platform-card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .platform-card p {
+            color: var(--text-dim);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .features {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .feature::before {
+            content: '→';
+            color: var(--accent);
+        }
+
+        /* Ошибки */
+        .errors-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .error-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .error-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .error-code {
+            background: rgba(255, 107, 107, 0.1);
+            color: var(--warning);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: monospace;
+            border: 1px solid rgba(255, 107, 107, 0.2);
+        }
+
+        .error-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .error-solution {
+            color: var(--success);
+            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .error-solution::before {
+            content: '✓';
+        }
+
+        /* Дисклеймер */
+        .disclaimer-box {
+            background: rgba(255, 193, 7, 0.03);
+            border: 1px solid rgba(255, 193, 7, 0.15);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        .disclaimer-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #ffc107;
+        }
+
+        .disclaimer-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .disclaimer-list li {
+            color: var(--text-dim);
+            font-size: 14px;
+            padding-left: 24px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .disclaimer-list li::before {
+            content: '•';
+            position: absolute;
+            left: 8px;
+            color: #ffc107;
+            font-size: 18px;
+        }
+
+        .disclaimer-list li strong {
+            color: var(--text);
+        }
+
+        /* Футер */
+        .footer {
+            text-align: center;
+            padding: 60px 20px 160px;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 32px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-mesh"></div>
+
+    <!-- Навигация точки (десктоп) -->
+    <div class="nav-dots">
+        <div class="nav-dot active" onclick="scrollToSection('top')"></div>
+        <div class="nav-dot" onclick="scrollToSection('facts')"></div>
+        <div class="nav-dot" onclick="scrollToSection('about')"></div>
+        <div class="nav-dot" onclick="scrollToSection('errors')"></div>
+        <div class="nav-dot" onclick="scrollToSection('disclaimer')"></div>
+    </div>
+
+    <!-- Навигация мобильная (снизу) -->
+    <nav class="nav-mobile">
+        <a href="#top" class="nav-mobile-item active">
+            <span>🏠</span>
+            <span>Главная</span>
+        </a>
+        <a href="#facts" class="nav-mobile-item">
+            <span>📊</span>
+            <span>Факты</span>
+        </a>
+        <a href="#about" class="nav-mobile-item">
+            <span>📍</span>
+            <span>Где</span>
+        </a>
+        <a href="#errors" class="nav-mobile-item">
+            <span>🔧</span>
+            <span>Ошибки</span>
+        </a>
+        <a href="#disclaimer" class="nav-mobile-item">
+            <span>⚠️</span>
+            <span>Важно</span>
+        </a>
+    </nav>
+
+    <!-- Hero -->
+    <section class="section hero" id="top">
+        <div class="logo">🎮</div>
+        <h1>
+            <span class="text-outline">Free</span>
+            <span class="text-gradient">Steam</span>
+        </h1>
+        <p class="subtitle text-gradient-subtle">Бесплатные аккаунты Steam с играми. Реальные данные, проверенные лично.</p>
+        
+        <div class="links">
+            <a href="https://t.me/steamaccounts5" class="btn btn-tg" target="_blank">
+                <span>✈️</span>
+                <span>Telegram</span>
+            </a>
+            <a href="https://www.tiktok.com/@account_steams" class="btn btn-tt" target="_blank">
+                <span>🎵</span>
+                <span>TikTok</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- ФАКТЫ -->
+    <section class="section" id="facts">
+        <h2 class="text-outline">Факты</h2>
+        <p class="section-desc">Реальная статистика проекта.</p>
+
+        <div class="facts-grid">
+            <div class="fact-card">
+                <div class="fact-number">2 100</div>
+                <div class="fact-label">Подписчиков в Telegram</div>
+                <div class="fact-desc">Активная аудитория, которая ежедневно получает уведомления о новых аккаунтах</div>
+            </div>
+            <div class="fact-card">
+                <div class="fact-number">5 000</div>
+                <div class="fact-label">Подписчиков в TikTok</div>
+                <div class="fact-desc">Зрители видео-проверок и обзоров игр на аккаунтах</div>
+            </div>
+            <div class="fact-card">
+                <div class="fact-number">100+</div>
+                <div class="fact-label">Аккаунтов в месяц</div>
+                <div class="fact-desc">Каждый аккаунт проверяется лично перед публикацией</div>
+            </div>
+            <div class="fact-card">
+                <div class="fact-number">0₽</div>
+                <div class="fact-label">Стоимость</div>
+                <div class="fact-desc">Всё полностью бесплатно. Никаких скрытых платежей</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- О каналах -->
+    <section class="section" id="about">
+        <h2 class="text-outline">Где получить</h2>
+        <p class="section-desc">Аккаунты публикуются только в Telegram. TikTok — для обзоров.</p>
+
+        <div class="platforms">
+            <div class="platform-card">
+                <div class="platform-icon">✈️</div>
+                <h3 class="text-gradient">Telegram — основной канал</h3>
+                <p>Здесь выкладываются все рабочие аккаунты. Подпишись, чтобы не пропустить.</p>
+                <div class="features">
+                    <span class="feature">Реальные логины и пароли</span>
+                    <span class="feature">Проверка перед публикацией</span>
+                    <span class="feature">Архив прошлых раздач</span>
+                    <span class="feature">Поддержка в комментариях</span>
+                </div>
+            </div>
+
+            <div class="platform-card">
+                <div class="platform-icon">🎵</div>
+                <h3 class="text-gradient">TikTok — видео-обзоры</h3>
+                <p>Видео-проверки входа в аккаунты и геймплей популярных игр.</p>
+                <div class="features">
+                    <span class="feature">Визуальная проверка аккаунтов</span>
+                    <span class="feature">Обзоры игр</span>
+                    <span class="feature">Инструкции по входу</span>
+                    <span class="feature">Ответы на вопросы</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ошибки -->
+    <section class="section" id="errors">
+        <h2 class="text-outline">Проблемы</h2>
+        <p class="section-desc">Частые ошибки при входе и их решения.</p>
+
+        <div class="errors-grid">
+            <div class="error-item">
+                <div class="error-header">
+                    <span class="error-code">ERROR 29</span>
+                    <span class="error-title">Слишком много попыток</span>
+                </div>
+                <div class="error-solution">Подождите 30 минут или используйте VPN</div>
+            </div>
+            <div class="error-item">
+                <div class="error-header">
+                    <span class="error-code">INVALID</span>
+                    <span class="error-title">Неверный логин или пароль</span>
+                </div>
+                <div class="error-solution">Проверьте раскладку (RU/EN) и пробелы</div>
+            </div>
+            <div class="error-item">
+                <div class="error-header">
+                    <span class="error-code">GUARD</span>
+                    <span class="error-title">Требуется код Steam Guard</span>
+                </div>
+                <div class="error-solution">Проверьте почту аккаунта или возьмите другой из свежей раздачи</div>
+            </div>
+            <div class="error-item">
+                <div class="error-header">
+                    <span class="error-code">LOCKED</span>
+                    <span class="error-title">Аккаунт заблокирован</span>
+                </div>
+                <div class="error-solution">Кто-то сменил пароль раньше. Берите из последних постов</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Дисклеймер -->
+    <section class="section" id="disclaimer">
+        <h2 class="text-outline">Важно</h2>
+        <p class="section-desc">Условия использования. Обязательно к прочтению.</p>
+
+        <div class="disclaimer-box">
+            <div class="disclaimer-title">
+                <span>⚠️</span>
+                <span>Дисклеймеры</span>
+            </div>
+            <ul class="disclaimer-list">
+                <li><strong>Я не создатель аккаунтов.</strong> Все данные из открытых источников. Я проверяю работоспособность и публикую.</li>
+                <li><strong>Аккаунты публичные.</strong> Ими пользуются множество людей. Не удивляйтесь, если кто-то уже вошёл.</li>
+                <li><strong>Не
